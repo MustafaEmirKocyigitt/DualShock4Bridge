@@ -59,6 +59,9 @@ class Config:
     # 5. Geliştirme #5: Dahili HidHide Yönetimi
     AUTO_CLOAK_PHYSICAL: bool = False
 
+    # Dil Seçimi: "en" (İngilizce) veya "tr" (Türkçe)
+    LANGUAGE: str = "en"
+
     # Debug ve canlı loglama
     DEBUG: bool = False
 

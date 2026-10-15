@@ -1,6 +1,7 @@
 """
 DualShock 4 Kontrol Merkezi - Profesyonel Yönetim Paneli
 ========================================================
+Çift Dil Desteği: İngilizce (Varsayılan) & Türkçe.
 Kullanıcı arayüzü ve anti-pattern kurallarına %100 uyumlu:
 - İç içe kart/kutu yok.
 - Gradient, parlama veya katmanlı gölge yok (en fazla 1px sakin kenarlık).
@@ -28,6 +29,7 @@ from config import Config
 from ds4_mapper import DS4Mapper
 from game_detector import GameDetector
 from hidhide_manager import HidHideManager
+from i18n import get_text
 from xinput_reader import GamepadState, XInputReader
 
 
@@ -52,6 +54,8 @@ def set_high_resolution_timer(enable: bool):
 class ProfessionalBridgeApp:
     def __init__(self):
         self.config = Config.load_from_file()
+        self.lang = getattr(self.config, "LANGUAGE", "en")
+
         self.reader = XInputReader(
             controller_index=self.config.CONTROLLER_INDEX,
             deadzone=self.config.THUMB_DEADZONE,
@@ -69,6 +73,10 @@ class ProfessionalBridgeApp:
         self.root: Optional[tk.Tk] = None
         self.tray_icon: Optional[pystray.Icon] = None
         self._bridge_thread: Optional[threading.Thread] = None
+
+    def t(self, key: str, **kwargs) -> str:
+        """Geçerli dilde metni döner."""
+        return get_text(key, lang=self.lang, **kwargs)
 
     def start_bridge_thread(self):
         """250 Hz köprü aktarım iş parçacığını başlatır."""
@@ -164,14 +172,14 @@ class ProfessionalBridgeApp:
             self.quit_app()
 
         menu = pystray.Menu(
-            item("DualShock 4 Kontrol Merkezi", show_window, default=True),
+            item(self.t("app_title"), show_window, default=True),
             pystray.Menu.SEPARATOR,
-            item(lambda text: "Köprüyü Duraklat" if not self.is_paused else "Köprüyü Başlat", toggle_bridge),
+            item(lambda text: self.t("tray_pause") if not self.is_paused else self.t("tray_start"), toggle_bridge),
             pystray.Menu.SEPARATOR,
-            item("Çıkış", exit_app)
+            item(self.t("tray_exit"), exit_app)
         )
 
-        self.tray_icon = pystray.Icon("DS4Bridge", self._create_tray_image(not self.is_paused), "DualShock 4 Köprüsü", menu)
+        self.tray_icon = pystray.Icon("DS4Bridge", self._create_tray_image(not self.is_paused), self.t("tray_title"), menu)
         threading.Thread(target=self.tray_icon.run, daemon=True).start()
 
     def _minimize_to_tray(self):
@@ -192,14 +200,21 @@ class ProfessionalBridgeApp:
         if self.root and hasattr(self, "pause_btn"):
             self._update_header_status()
 
+    def toggle_language(self):
+        """Dili TR <-> EN arasında anlık değiştirir."""
+        self.lang = "en" if self.lang == "tr" else "tr"
+        self.config.LANGUAGE = self.lang
+        self.config.save_to_file()
+        self._rebuild_all_texts()
+
     # -------------------------------------------------------------
     # PROFESYONEL VE SADE ARAYÜZ (TKINTER)
     # -------------------------------------------------------------
     def run_gui(self):
         self.root = tk.Tk()
-        self.root.title("DualShock 4 Kontrol Merkezi")
-        self.root.geometry("640x720")
-        self.root.minsize(600, 680)
+        self.root.title(self.t("app_title"))
+        self.root.geometry("640x740")
+        self.root.minsize(600, 700)
         self.root.configure(bg="#0b1120")
 
         self._build_interface()
@@ -223,7 +238,7 @@ class ProfessionalBridgeApp:
         # Kontrolcü Bağlantı Durumu
         self.conn_dot_lbl = tk.Label(
             status_info_box,
-            text="● Kontrolcü taranıyor...",
+            text=self.t("controller_waiting"),
             font=("Segoe UI", 11, "bold"),
             bg="#131d31",
             fg="#94a3b8"
@@ -233,17 +248,38 @@ class ProfessionalBridgeApp:
         # Köprü Aktarım Durumu
         self.bridge_lbl = tk.Label(
             status_info_box,
-            text="● Köprü hazırlanıyor...",
+            text=self.t("bridge_initializing"),
             font=("Segoe UI", 10),
             bg="#131d31",
             fg="#64748b"
         )
         self.bridge_lbl.pack(anchor="w", pady=(3, 0))
 
-        # Sağ: Tek Ana Aksiyon Butonu
+        # Sağ: Aksiyon Butonu ve Dil Değiştirici
+        right_action_box = tk.Frame(header_card, bg="#131d31")
+        right_action_box.pack(side="right", padx=16, pady=14)
+
+        # Dil Değiştirme Butonu
+        self.lang_btn = tk.Button(
+            right_action_box,
+            text="🇹🇷 TR" if self.lang == "tr" else "🇬🇧 EN",
+            font=("Segoe UI", 9),
+            bg="#1e293b",
+            fg="#ffffff",
+            activebackground="#334155",
+            activeforeground="#ffffff",
+            relief="flat",
+            padx=10,
+            pady=4,
+            cursor="hand2",
+            command=self.toggle_language
+        )
+        self.lang_btn.pack(side="top", anchor="e", pady=(0, 6))
+
+        # Tek Ana Aksiyon Butonu
         self.pause_btn = tk.Button(
-            header_card,
-            text="Köprüyü Duraklat",
+            right_action_box,
+            text=self.t("btn_pause"),
             font=("Segoe UI", 10, "bold"),
             bg="#2563eb",
             fg="#ffffff",
@@ -255,7 +291,7 @@ class ProfessionalBridgeApp:
             cursor="hand2",
             command=self.toggle_pause
         )
-        self.pause_btn.pack(side="right", padx=16, pady=14)
+        self.pause_btn.pack(side="bottom")
 
         # 2. Sekmeler (Notebook)
         style = ttk.Style()
@@ -269,12 +305,12 @@ class ProfessionalBridgeApp:
 
         # Sekme 1: Genel Bakış & Canlı Test
         self.tab_test = tk.Frame(self.notebook, bg="#0b1120")
-        self.notebook.add(self.tab_test, text="Genel Bakış & Canlı Test")
+        self.notebook.add(self.tab_test, text=self.t("tab_test"))
         self._build_test_tab(self.tab_test)
 
         # Sekme 2: Açıklamalı Ayarlar
         self.tab_settings = tk.Frame(self.notebook, bg="#0b1120")
-        self.notebook.add(self.tab_settings, text="Yapılandırma & Ayarlar")
+        self.notebook.add(self.tab_settings, text=self.t("tab_settings"))
         self._build_settings_tab(self.tab_settings)
 
     def _build_test_tab(self, parent):
@@ -282,7 +318,8 @@ class ProfessionalBridgeApp:
         sticks_card = tk.Frame(parent, bg="#131d31", highlightbackground="#1e293b", highlightthickness=1)
         sticks_card.pack(fill="x", pady=(12, 10))
 
-        tk.Label(sticks_card, text="Analog Çubuklar", font=("Segoe UI", 11, "bold"), bg="#131d31", fg="#f8fafc").pack(anchor="w", padx=14, pady=(10, 4))
+        self.lbl_sec_sticks = tk.Label(sticks_card, text=self.t("sec_sticks"), font=("Segoe UI", 11, "bold"), bg="#131d31", fg="#f8fafc")
+        self.lbl_sec_sticks.pack(anchor="w", padx=14, pady=(10, 4))
 
         canv_row = tk.Frame(sticks_card, bg="#131d31")
         canv_row.pack(padx=14, pady=(0, 12))
@@ -290,7 +327,8 @@ class ProfessionalBridgeApp:
         # Sol Stick
         left_sub = tk.Frame(canv_row, bg="#131d31")
         left_sub.pack(side="left", padx=28)
-        tk.Label(left_sub, text="Sol Analog (Hareket)", font=("Segoe UI", 9), bg="#131d31", fg="#94a3b8").pack()
+        self.lbl_stick_left = tk.Label(left_sub, text=self.t("stick_left"), font=("Segoe UI", 9), bg="#131d31", fg="#94a3b8")
+        self.lbl_stick_left.pack()
         self.canv_left = tk.Canvas(left_sub, width=100, height=100, bg="#0b1120", highlightthickness=1, highlightbackground="#1e293b")
         self.canv_left.pack(pady=4)
         self.lbl_left_coords = tk.Label(left_sub, text="X: 0.00  Y: 0.00", font=("Segoe UI", 9), bg="#131d31", fg="#64748b")
@@ -299,7 +337,8 @@ class ProfessionalBridgeApp:
         # Sağ Stick
         right_sub = tk.Frame(canv_row, bg="#131d31")
         right_sub.pack(side="left", padx=28)
-        tk.Label(right_sub, text="Sağ Analog (Kamera)", font=("Segoe UI", 9), bg="#131d31", fg="#94a3b8").pack()
+        self.lbl_stick_right = tk.Label(right_sub, text=self.t("stick_right"), font=("Segoe UI", 9), bg="#131d31", fg="#94a3b8")
+        self.lbl_stick_right.pack()
         self.canv_right = tk.Canvas(right_sub, width=100, height=100, bg="#0b1120", highlightthickness=1, highlightbackground="#1e293b")
         self.canv_right.pack(pady=4)
         self.lbl_right_coords = tk.Label(right_sub, text="X: 0.00  Y: 0.00", font=("Segoe UI", 9), bg="#131d31", fg="#64748b")
@@ -309,8 +348,9 @@ class ProfessionalBridgeApp:
         btn_card = tk.Frame(parent, bg="#131d31", highlightbackground="#1e293b", highlightthickness=1)
         btn_card.pack(fill="x", pady=6)
 
-        tk.Label(btn_card, text="Tuş ve Tetik Girişleri", font=("Segoe UI", 11, "bold"), bg="#131d31", fg="#f8fafc").pack(anchor="w", padx=14, pady=(10, 4))
-        self.keys_lbl = tk.Label(btn_card, text="(Şu anda bir tuşa basılmıyor)", font=("Segoe UI", 10), bg="#131d31", fg="#38bdf8", wraplength=550, justify="left")
+        self.lbl_sec_buttons = tk.Label(btn_card, text=self.t("sec_buttons"), font=("Segoe UI", 11, "bold"), bg="#131d31", fg="#f8fafc")
+        self.lbl_sec_buttons.pack(anchor="w", padx=14, pady=(10, 4))
+        self.keys_lbl = tk.Label(btn_card, text=self.t("no_button_pressed"), font=("Segoe UI", 10), bg="#131d31", fg="#38bdf8", wraplength=550, justify="left")
         self.keys_lbl.pack(anchor="w", padx=14, pady=(0, 12))
 
         # 3. Hızlı Test Aksiyonu
@@ -319,7 +359,7 @@ class ProfessionalBridgeApp:
 
         self.rumble_btn = tk.Button(
             test_action_row,
-            text="Titreşimi Test Et (0.4 sn)",
+            text=self.t("btn_test_rumble"),
             font=("Segoe UI", 10),
             bg="#1e293b",
             fg="#ffffff",
@@ -338,16 +378,18 @@ class ProfessionalBridgeApp:
         dz_card = tk.Frame(parent, bg="#131d31", highlightbackground="#1e293b", highlightthickness=1)
         dz_card.pack(fill="x", pady=(12, 6))
 
-        tk.Label(dz_card, text="Ölü Bölge (Deadzone) Eşiği", font=("Segoe UI", 11, "bold"), bg="#131d31", fg="#f8fafc").pack(anchor="w", padx=14, pady=(8, 2))
-        tk.Label(
+        self.lbl_dz_title = tk.Label(dz_card, text=self.t("sec_deadzone_title"), font=("Segoe UI", 11, "bold"), bg="#131d31", fg="#f8fafc")
+        self.lbl_dz_title.pack(anchor="w", padx=14, pady=(8, 2))
+        self.lbl_dz_desc = tk.Label(
             dz_card,
-            text="Analog çubukların merkezdeki hassasiyet boşluğudur. Çubukları bıraktığınızda karakterin veya kameranın kendiliğinden kaymasını (drift) engeller. (Önerilen: %6.0)",
+            text=self.t("sec_deadzone_desc"),
             font=("Segoe UI", 9),
             bg="#131d31",
             fg="#94a3b8",
             wraplength=550,
             justify="left"
-        ).pack(anchor="w", padx=14)
+        )
+        self.lbl_dz_desc.pack(anchor="w", padx=14)
 
         dz_val_row = tk.Frame(dz_card, bg="#131d31")
         dz_val_row.pack(fill="x", padx=14, pady=(4, 8))
@@ -360,16 +402,18 @@ class ProfessionalBridgeApp:
         vib_card = tk.Frame(parent, bg="#131d31", highlightbackground="#1e293b", highlightthickness=1)
         vib_card.pack(fill="x", pady=6)
 
-        tk.Label(vib_card, text="Titreşim (Force Feedback) Gücü", font=("Segoe UI", 11, "bold"), bg="#131d31", fg="#f8fafc").pack(anchor="w", padx=14, pady=(8, 2))
-        tk.Label(
+        self.lbl_vib_title = tk.Label(vib_card, text=self.t("sec_rumble_title"), font=("Segoe UI", 11, "bold"), bg="#131d31", fg="#f8fafc")
+        self.lbl_vib_title.pack(anchor="w", padx=14, pady=(8, 2))
+        self.lbl_vib_desc = tk.Label(
             vib_card,
-            text="God of War gibi oyunlarda Kratos'un balta fırlatması, darbeler ve büyü efektlerinin kol motorlarına iletilme şiddetidir. (Önerilen: %100)",
+            text=self.t("sec_rumble_desc"),
             font=("Segoe UI", 9),
             bg="#131d31",
             fg="#94a3b8",
             wraplength=550,
             justify="left"
-        ).pack(anchor="w", padx=14)
+        )
+        self.lbl_vib_desc.pack(anchor="w", padx=14)
 
         vib_val_row = tk.Frame(vib_card, bg="#131d31")
         vib_val_row.pack(fill="x", padx=14, pady=(4, 8))
@@ -382,35 +426,39 @@ class ProfessionalBridgeApp:
         back_card = tk.Frame(parent, bg="#131d31", highlightbackground="#1e293b", highlightthickness=1)
         back_card.pack(fill="x", pady=6)
 
-        tk.Label(back_card, text="Back (Görünüm) Tuşu Davranışı", font=("Segoe UI", 11, "bold"), bg="#131d31", fg="#f8fafc").pack(anchor="w", padx=14, pady=(8, 2))
-        tk.Label(
+        self.lbl_back_title = tk.Label(back_card, text=self.t("sec_back_title"), font=("Segoe UI", 11, "bold"), bg="#131d31", fg="#f8fafc")
+        self.lbl_back_title.pack(anchor="w", padx=14, pady=(8, 2))
+        self.lbl_back_desc = tk.Label(
             back_card,
-            text="PlayStation oyunlarında haritayı ve menüyü açmak için DualShock 4 dokunmatik yüzeyine (Touchpad) basılır. Koldaki Back tuşunun işlevini belirler. (Önerilen: both - Touchpad + Share)",
+            text=self.t("sec_back_desc"),
             font=("Segoe UI", 9),
             bg="#131d31",
             fg="#94a3b8",
             wraplength=550,
             justify="left"
-        ).pack(anchor="w", padx=14)
+        )
+        self.lbl_back_desc.pack(anchor="w", padx=14)
 
         back_mode_row = tk.Frame(back_card, bg="#131d31")
         back_mode_row.pack(anchor="w", padx=14, pady=(6, 10))
         self.back_mode_var = tk.StringVar(value=self.config.BACK_MAPPING_MODE)
         mode_menu = ttk.Combobox(back_mode_row, textvariable=self.back_mode_var, values=["both", "touchpad", "share"], state="readonly", width=16)
         mode_menu.pack(side="left")
-        tk.Label(back_mode_row, text="(both: Haritayı doğrudan koldan açar)", font=("Segoe UI", 9), bg="#131d31", fg="#64748b").pack(side="left", padx=8)
+        self.lbl_back_extra = tk.Label(back_mode_row, text=self.t("back_desc_both"), font=("Segoe UI", 9), bg="#131d31", fg="#64748b")
+        self.lbl_back_extra.pack(side="left", padx=8)
 
         # 4. Otomasyon ve HidHide Kartı
         auto_card = tk.Frame(parent, bg="#131d31", highlightbackground="#1e293b", highlightthickness=1)
         auto_card.pack(fill="x", pady=6)
 
-        tk.Label(auto_card, text="Otomasyon ve Cihaz Gizleme", font=("Segoe UI", 11, "bold"), bg="#131d31", fg="#f8fafc").pack(anchor="w", padx=14, pady=(8, 2))
+        self.lbl_auto_title = tk.Label(auto_card, text=self.t("sec_auto_title"), font=("Segoe UI", 11, "bold"), bg="#131d31", fg="#f8fafc")
+        self.lbl_auto_title.pack(anchor="w", padx=14, pady=(8, 2))
 
         # Akıllı Oyun Algılama
         self.auto_detect_var = tk.BooleanVar(value=self.config.AUTO_GAME_DETECT)
-        chk_detect = tk.Checkbutton(
+        self.chk_detect = tk.Checkbutton(
             auto_card,
-            text="Akıllı Oyun Algılama (Önerilen: Açık)\nDesteklenen bir PlayStation oyunu açıldığında köprüyü otomatik başlatır, oyundan çıkıldığında uyku moduna alır.",
+            text=self.t("chk_auto_game"),
             variable=self.auto_detect_var,
             font=("Segoe UI", 9),
             bg="#131d31",
@@ -420,14 +468,14 @@ class ProfessionalBridgeApp:
             activeforeground="#f8fafc",
             justify="left"
         )
-        chk_detect.pack(anchor="w", padx=14, pady=4)
+        self.chk_detect.pack(anchor="w", padx=14, pady=4)
 
         # HidHide Cloaking
         if self.hidhide.is_installed():
             self.hidhide_var = tk.BooleanVar(value=bool(self.hidhide.get_cloaking_status()))
-            chk_hidhide = tk.Checkbutton(
+            self.chk_hidhide = tk.Checkbutton(
                 auto_card,
-                text="HidHide ile Fiziksel Xbox Kolunu Gizle (Önerilen: Açık)\nFiziksel kolu oyunlardan gizleyerek çift basmayı ve Xbox tuş simgelerinin çakışmasını engeller.",
+                text=self.t("chk_hidhide"),
                 variable=self.hidhide_var,
                 font=("Segoe UI", 9),
                 bg="#131d31",
@@ -438,16 +486,16 @@ class ProfessionalBridgeApp:
                 justify="left",
                 command=self._on_toggle_hidhide
             )
-            chk_hidhide.pack(anchor="w", padx=14, pady=(4, 10))
+            self.chk_hidhide.pack(anchor="w", padx=14, pady=(4, 10))
 
         # Alt Butonlar Satırı (Önerilenleri Yükle + Kaydet)
         btn_action_row = tk.Frame(parent, bg="#0b1120")
         btn_action_row.pack(fill="x", pady=12)
 
         # İkincil Buton: Önerilen Ayarları Yükle
-        reset_btn = tk.Button(
+        self.reset_btn = tk.Button(
             btn_action_row,
-            text="Önerilen Ayarları Yükle",
+            text=self.t("btn_load_recommended"),
             font=("Segoe UI", 10),
             bg="#1e293b",
             fg="#ffffff",
@@ -459,12 +507,12 @@ class ProfessionalBridgeApp:
             cursor="hand2",
             command=self._load_recommended_settings
         )
-        reset_btn.pack(side="left")
+        self.reset_btn.pack(side="left")
 
         # Tek Ana Vurgulu Buton: Ayarları Kaydet
         self.save_btn = tk.Button(
             btn_action_row,
-            text="Ayarları Kaydet",
+            text=self.t("btn_save_settings"),
             font=("Segoe UI", 10, "bold"),
             bg="#2563eb",
             fg="#ffffff",
@@ -477,6 +525,41 @@ class ProfessionalBridgeApp:
             command=self._save_all_settings
         )
         self.save_btn.pack(side="right")
+
+    def _rebuild_all_texts(self):
+        """Dil değiştiğinde tüm UI yazılarını anında günceller."""
+        if not self.root:
+            return
+        self.root.title(self.t("app_title"))
+        self.lang_btn.config(text="🇹🇷 TR" if self.lang == "tr" else "🇬🇧 EN")
+
+        # Sekme başlıkları
+        self.notebook.tab(self.tab_test, text=self.t("tab_test"))
+        self.notebook.tab(self.tab_settings, text=self.t("tab_settings"))
+
+        # Test sekmesi
+        self.lbl_sec_sticks.config(text=self.t("sec_sticks"))
+        self.lbl_stick_left.config(text=self.t("stick_left"))
+        self.lbl_stick_right.config(text=self.t("stick_right"))
+        self.lbl_sec_buttons.config(text=self.t("sec_buttons"))
+        self.rumble_btn.config(text=self.t("btn_test_rumble"))
+
+        # Ayarlar sekmesi
+        self.lbl_dz_title.config(text=self.t("sec_deadzone_title"))
+        self.lbl_dz_desc.config(text=self.t("sec_deadzone_desc"))
+        self.lbl_vib_title.config(text=self.t("sec_rumble_title"))
+        self.lbl_vib_desc.config(text=self.t("sec_rumble_desc"))
+        self.lbl_back_title.config(text=self.t("sec_back_title"))
+        self.lbl_back_desc.config(text=self.t("sec_back_desc"))
+        self.lbl_back_extra.config(text=self.t("back_desc_both"))
+        self.lbl_auto_title.config(text=self.t("sec_auto_title"))
+        self.chk_detect.config(text=self.t("chk_auto_game"))
+        if hasattr(self, "chk_hidhide"):
+            self.chk_hidhide.config(text=self.t("chk_hidhide"))
+        self.reset_btn.config(text=self.t("btn_load_recommended"))
+        self.save_btn.config(text=self.t("btn_save_settings"))
+
+        self._update_header_status()
 
     def _on_dz_slider(self, val):
         f = float(val)
@@ -508,14 +591,15 @@ class ProfessionalBridgeApp:
         self.config.AUTO_GAME_DETECT = True
         self.auto_detect_var.set(True)
 
-        messagebox.showinfo("Önerilen Ayarlar", "Tüm ayarlar önerilen fabrika ayarlarına getirildi. Kaydetmek için 'Ayarları Kaydet' butonuna basabilirsiniz.")
+        messagebox.showinfo(self.t("recommended_title"), self.t("recommended_msg"))
 
     def _save_all_settings(self):
         self.config.BACK_MAPPING_MODE = self.back_mode_var.get()
         self.config.AUTO_GAME_DETECT = self.auto_detect_var.get()
+        self.config.LANGUAGE = self.lang
         self.config.save_to_file()
-        self.save_btn.config(text="Kaydedildi ✓", bg="#16a34a")
-        self.root.after(1500, lambda: self.save_btn.config(text="Ayarları Kaydet", bg="#2563eb") if self.root else None)
+        self.save_btn.config(text=self.t("saved_success"), bg="#16a34a")
+        self.root.after(1500, lambda: self.save_btn.config(text=self.t("btn_save_settings"), bg="#2563eb") if self.root else None)
 
     def _test_rumble_action(self):
         def vib():
@@ -527,31 +611,27 @@ class ProfessionalBridgeApp:
     def _draw_stick(self, canvas: tk.Canvas, x: float, y: float, dz: float):
         canvas.delete("all")
         cx, cy, r = 50, 50, 42
-        # Dış sınır
         canvas.create_oval(cx - r, cy - r, cx + r, cy + r, outline="#1e293b", width=1)
-        # Ölü bölge dairesi
         dz_r = r * dz
         canvas.create_oval(cx - dz_r, cy - dz_r, cx + dz_r, cy + dz_r, outline="#334155", dash=(2, 2))
-        # Merkez çizgileri
         canvas.create_line(cx - 5, cy, cx + 5, cy, fill="#1e293b")
         canvas.create_line(cx, cy - 5, cx, cy + 5, fill="#1e293b")
-        # Canlı stick noktası
         px = cx + (x * r)
         py = cy - (y * r)
         canvas.create_oval(px - 4, py - 4, px + 4, py + 4, fill="#38bdf8", outline="")
 
     def _update_header_status(self):
         if self.current_state.connected:
-            self.conn_dot_lbl.config(text=f"● Fiziksel Kol Bağlı (Xbox Controller #{self.config.CONTROLLER_INDEX})", fg="#10b981")
+            self.conn_dot_lbl.config(text=self.t("controller_connected", idx=self.config.CONTROLLER_INDEX), fg="#10b981")
         else:
-            self.conn_dot_lbl.config(text="● Kol Bağlantısı Bekleniyor...", fg="#ef4444")
+            self.conn_dot_lbl.config(text=self.t("controller_waiting"), fg="#ef4444")
 
         if self.is_paused:
-            self.bridge_lbl.config(text="● Köprü Duraklatıldı", fg="#94a3b8")
-            self.pause_btn.config(text="Köprüyü Başlat", bg="#10b981")
+            self.bridge_lbl.config(text=self.t("bridge_paused"), fg="#94a3b8")
+            self.pause_btn.config(text=self.t("btn_start"), bg="#10b981")
         else:
-            self.bridge_lbl.config(text="● PlayStation Aktarımı Aktif (250 Hz)", fg="#38bdf8")
-            self.pause_btn.config(text="Köprüyü Duraklat", bg="#2563eb")
+            self.bridge_lbl.config(text=self.t("bridge_active"), fg="#38bdf8")
+            self.pause_btn.config(text=self.t("btn_pause"), bg="#2563eb")
 
     def _poll_ui(self):
         if not self.is_running or not self.root:
@@ -567,27 +647,27 @@ class ProfessionalBridgeApp:
             self.lbl_left_coords.config(text=f"X: {s.thumb_lx:+.2f}  Y: {s.thumb_ly:+.2f}")
             self.lbl_right_coords.config(text=f"X: {s.thumb_rx:+.2f}  Y: {s.thumb_ry:+.2f}")
 
-            # Basılı tuşlar
+            # Basılı tuşlar (Her iki dilde de anlaşılır PS/Xbox gösterimi)
             pressed = []
-            if s.btn_a: pressed.append("A (Çarpı ⨉)")
-            if s.btn_b: pressed.append("B (Daire ◯)")
-            if s.btn_x: pressed.append("X (Kare ▢)")
-            if s.btn_y: pressed.append("Y (Üçgen △)")
+            if s.btn_a: pressed.append("A (Cross ⨉)")
+            if s.btn_b: pressed.append("B (Circle ◯)")
+            if s.btn_x: pressed.append("X (Square ▢)")
+            if s.btn_y: pressed.append("Y (Triangle △)")
             if s.btn_lb: pressed.append("LB (L1)")
             if s.btn_rb: pressed.append("RB (R1)")
-            if s.btn_l3: pressed.append("L3 (Sol Stick Tık)")
-            if s.btn_r3: pressed.append("R3 (Sağ Stick Tık)")
+            if s.btn_l3: pressed.append("L3")
+            if s.btn_r3: pressed.append("R3")
             if s.btn_start: pressed.append("Start (Options)")
-            if s.btn_back: pressed.append("Back (Touchpad / Harita)")
+            if s.btn_back: pressed.append("Back (Touchpad / Map)")
             if s.btn_guide: pressed.append("Xbox (PS Logo)")
-            if s.dpad_up: pressed.append("D-pad Yukarı")
-            if s.dpad_down: pressed.append("D-pad Aşağı")
-            if s.dpad_left: pressed.append("D-pad Sol")
-            if s.dpad_right: pressed.append("D-pad Sağ")
+            if s.dpad_up: pressed.append("D-pad Up")
+            if s.dpad_down: pressed.append("D-pad Down")
+            if s.dpad_left: pressed.append("D-pad Left")
+            if s.dpad_right: pressed.append("D-pad Right")
             if s.trigger_left > 0.1: pressed.append(f"L2: %{int(s.trigger_left * 100)}")
             if s.trigger_right > 0.1: pressed.append(f"R2: %{int(s.trigger_right * 100)}")
 
-            self.keys_lbl.config(text="  |  ".join(pressed) if pressed else "(Şu anda bir tuşa basılmıyor)")
+            self.keys_lbl.config(text="  |  ".join(pressed) if pressed else self.t("no_button_pressed"))
 
         except Exception:
             pass
