@@ -19,5 +19,6 @@ dist_setup/
 Thumbs.db
 Desktop.ini
 
-# Yerel Yapılandırma
+# Yerel Yapılandırma ve Yardımcılar
 config.json
+githuba_yukle.bat
