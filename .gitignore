@@ -1,0 +1,23 @@
+# Python & Sanal Ortam
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+*$py.class
+
+# PyInstaller & Derleme Çıktıları
+build/
+dist/
+dist_setup/
+*.spec
+
+# IDE ve Sistem Dosyaları
+.idea/
+.vscode/
+*.suo
+*.user
+Thumbs.db
+Desktop.ini
+
+# Yerel Yapılandırma
+config.json
