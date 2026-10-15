@@ -52,9 +52,12 @@ This enables PC games ported from PlayStation (**God of War**, *Marvel's Spider-
 ## 🚀 Getting Started
 
 ### Option 1: Official Windows Installer (Recommended)
-1. Download **`DualShock4_Kurulum_Setup.exe`** from the [Releases](../../releases) section.
-2. Complete the setup wizard.
+1. Download the installer directly from this repository:  
+   👉 **[📥 Download DualShock4_Kurulum_Setup.exe](setup/DualShock4_Kurulum_Setup.exe?raw=true)** *(Included in the `setup/` folder)*
+2. Run the setup wizard and complete the installation.
 3. Launch **DualShock 4 Control Center** from your Desktop or Start Menu.
+
+*(If you already cloned the repository, you can simply run **`kurulum.bat`**).*
 
 ### Option 2: Run from Source
 Clone and run directly in your Python environment:

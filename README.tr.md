@@ -52,9 +52,12 @@ Bu sayede PC'de oynadığınız PlayStation kökenli oyunlar (**God of War**, *M
 ## 🚀 Kurulum ve Başlangıç
 
 ### Yöntem 1: Hazır Kurulum Sihirbazı (Önerilen)
-1. Projenin [Releases](../../releases) bölümünden **`DualShock4_Kurulum_Setup.exe`** dosyasını indirin.
-2. Kurulumu tamamlayın.
+1. Kurulum dosyasını doğrudan bu depodan indirin:  
+   👉 **[📥 DualShock4_Kurulum_Setup.exe İndir](setup/DualShock4_Kurulum_Setup.exe?raw=true)** *(Depodaki `setup/` klasörünün içindedir)*
+2. Kurulum sihirbazını çalıştırıp kurulumu tamamlayın.
 3. Masaüstündeki **DualShock 4 Kontrol Merkezi** simgesini açın.
+
+*(Eğer projeyi bilgisayarınıza klonladıysanız doğrudan **`kurulum.bat`** dosyasını da çalıştırabilirsiniz).*
 
 ### Yöntem 2: Kaynak Koddan Çalıştırma
 Projeyi klonlayıp kendi Python ortamınızda çalıştırmak için:
