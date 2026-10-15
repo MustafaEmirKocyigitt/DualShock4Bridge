@@ -112,3 +112,16 @@ Uygulama arayüzünden yapılan tüm ayarlar `config.json` dosyasına kaydedilir
 
 Bu proje [MIT Lisansı](LICENSE) kapsamında açık kaynak olarak sunulmaktadır.
 Dilediğiniz gibi kullanabilir, geliştirebilir ve paylaşabilirsiniz.
+
+---
+
+## ⚖️ Yasal Uyarı & Marka Feragatnamesi (Disclaimer)
+
+Bu proje bağımsız bir açık kaynak yazılımıdır ve **Sony Interactive Entertainment Inc.** veya **Microsoft Corporation** ile hiçbir resmi bağı, sponsorluğu veya onayı bulunmamaktadır. 
+
+* "PlayStation", "DualShock", "DualSense", "PS4", "PS5" ifadeleri Sony Interactive Entertainment Inc. şirketinin tescilli ticari markalarıdır.
+* "Xbox", "Xbox Series X/S", "Xbox One", "XInput" ifadeleri Microsoft Corporation şirketinin tescilli ticari markalarıdır.
+* Dokümantasyonda adı geçen oyun isimleri ilgili stüdyo ve yayıncıların mülkiyetindedir.
+
+Bu ticari markalar ve isimler bu depoda yalnızca **donanım uyumluluğunu, birlikte çalışabilirliği ve teknik işlevselliği** kullanıcılara açıklamak amacıyla referans (Nominative Fair Use) olarak kullanılmıştır.
+
